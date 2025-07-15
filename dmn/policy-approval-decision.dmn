@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/" xmlns:dmndi="https://www.omg.org/spec/DMN/20191111/DMNDI/" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="policy-approval-decisions" name="Simple Policy Approval" namespace="http://camunda.org/schema/1.0/dmn">
+
+  <decision id="policy-approval-decision" name="Simple Policy Approval Decision">
+    <decisionTable id="DecisionTable_Simple" hitPolicy="FIRST">
+
+      <!-- Input: Risk Level -->
+      <input id="Input_RiskLevel" label="Risk Level">
+        <inputExpression id="InputExpression_RiskLevel" typeRef="string">
+          <text>policyData.riskLevel</text>
+        </inputExpression>
+      </input>
+
+      <!-- Output: Auto Approve -->
+      <output id="Output_AutoApprove" label="Auto Approve" name="autoApprove" typeRef="boolean" />
+
+      <!-- Decision Rules -->
+
+      <!-- Rule 1: Low Risk - Auto Approve -->
+      <rule id="Rule_1">
+        <inputEntry id="UnaryTests_1">
+          <text>"Low"</text>
+        </inputEntry>
+        <outputEntry id="LiteralExpression_1">
+          <text>true</text>
+        </outputEntry>
+      </rule>
+
+      <!-- Rule 2: All Other Risks - Manual Review -->
+      <rule id="Rule_2">
+        <inputEntry id="UnaryTests_2">
+          <text>-</text>
+        </inputEntry>
+        <outputEntry id="LiteralExpression_2">
+          <text>false</text>
+        </outputEntry>
+      </rule>
+
+
+    </decisionTable>
+  </decision>
+
+</definitions>
