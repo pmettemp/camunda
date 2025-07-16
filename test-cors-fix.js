@@ -7,7 +7,7 @@ async function testCORSFix() {
     // Test with CORS headers that the frontend would send
     console.log('1️⃣ Testing CORS preflight request...');
     
-    const preflightResponse = await axios.options('http://localhost:3005/api/policies', {
+    const preflightResponse = await axios.options('http://localhost:3001/api/policies', {
       headers: {
         'Origin': 'http://localhost:3000',
         'Access-Control-Request-Method': 'POST',
@@ -34,7 +34,7 @@ async function testCORSFix() {
       authorName: "CORS Test User"
     };
     
-    const postResponse = await axios.post('http://localhost:3005/api/policies', testPolicy, {
+    const postResponse = await axios.post('http://localhost:3001/api/policies', testPolicy, {
       headers: {
         'Origin': 'http://localhost:3000',
         'Content-Type': 'application/json'

@@ -16,6 +16,8 @@ const databaseService = process.env.DB_TYPE === 'sqlite'
 // Import routes
 const policiesRouter = require('./routes/policies');
 const tasksRouter = require('./routes/tasks');
+const dashboardRouter = require('./routes/dashboard');
+const usersRouter = require('./routes/users');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -49,6 +51,8 @@ app.use((req, res, next) => {
 // Routes
 app.use('/api/policies', policiesRouter);
 app.use('/api/tasks', tasksRouter);
+app.use('/api/dashboard', dashboardRouter);
+app.use('/api/users', usersRouter);
 
 // Deployment endpoint
 app.post('/api/deploy', async (req, res) => {

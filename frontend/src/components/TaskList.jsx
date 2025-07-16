@@ -1,58 +1,88 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from 'react-query';
 import { toast } from 'react-toastify';
-import { 
-  ClockIcon, 
-  UserIcon, 
+import {
+  ClockIcon,
+  UserIcon,
   DocumentTextIcon,
   CheckCircleIcon,
   XCircleIcon,
-  EyeIcon
+  EyeIcon,
+  ArrowPathIcon,
+  FunnelIcon,
+  Squares2X2Icon,
+  ListBulletIcon
 } from '@heroicons/react/24/outline';
-import { getTasks, claimTask, unclaimTask } from '../services/api';
+import { useTasks, useClaimTask } from '../hooks/useWorkflow';
+import { formatDateTime, timeAgo, getTaskTypeDisplayText } from '../utils/workflowUtils';
 import TaskModal from './TaskModal';
+import LoadingSpinner from './shared/LoadingSpinner';
+import StatusBadge from './shared/StatusBadge';
+import SearchFilter from './shared/SearchFilter';
 
 const TaskList = ({ userId = 'user123' }) => {
   const [selectedTask, setSelectedTask] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState({});
+  const [viewMode, setViewMode] = useState('list'); // 'list' or 'grid'
 
-  const {
-    data: tasksData,
-    isLoading,
-    error,
-    refetch
-  } = useQuery(
-    ['tasks', userId],
-    () => getTasks(userId),
-    {
-      refetchInterval: 30000, // Refetch every 30 seconds
-      onError: (error) => {
-        toast.error('Failed to fetch tasks');
-      }
-    }
-  );
+  // Use custom hooks
+  const { data: tasksData, isLoading, error, refetch } = useTasks(userId);
+  const claimTaskMutation = useClaimTask();
 
   const tasks = tasksData?.data?.tasks || [];
 
-  const handleClaimTask = async (taskId) => {
-    try {
-      await claimTask(taskId, userId);
-      toast.success('Task claimed successfully');
-      refetch();
-    } catch (error) {
-      toast.error('Failed to claim task');
+  // Filter configuration
+  const filterConfig = [
+    {
+      key: 'state',
+      label: 'State',
+      type: 'select',
+      options: [
+        { value: 'CREATED', label: 'Created' },
+        { value: 'ASSIGNED', label: 'Assigned' },
+        { value: 'COMPLETED', label: 'Completed' },
+        { value: 'CANCELED', label: 'Canceled' }
+      ]
+    },
+    {
+      key: 'taskType',
+      label: 'Task Type',
+      type: 'select',
+      options: [
+        { value: 'Task_Review', label: 'Manual Review' },
+        { value: 'Task_LegalReview', label: 'Legal Review' },
+        { value: 'Task_ComplianceReview', label: 'Compliance Review' }
+      ]
     }
+  ];
+
+  // Filter tasks based on search and filters
+  const filteredTasks = tasks.filter(task => {
+    // Search filter
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      const matchesSearch =
+        task.name?.toLowerCase().includes(term) ||
+        task.processInstanceKey?.toString().includes(term) ||
+        task.variables?.policyData?.title?.toLowerCase().includes(term);
+      if (!matchesSearch) return false;
+    }
+
+    // Other filters
+    for (const [key, value] of Object.entries(filters)) {
+      if (value && task[key] !== value) return false;
+    }
+
+    return true;
+  });
+
+  const handleClaimTask = (taskId) => {
+    claimTaskMutation.mutate({ taskId, userId });
   };
 
-  const handleUnclaimTask = async (taskId) => {
-    try {
-      await unclaimTask(taskId);
-      toast.success('Task unclaimed successfully');
-      refetch();
-    } catch (error) {
-      toast.error('Failed to unclaim task');
-    }
-  };
+  // Note: Unclaim functionality can be added later if needed
 
   const handleViewTask = (task) => {
     setSelectedTask(task);
@@ -105,148 +135,180 @@ const TaskList = ({ userId = 'user123' }) => {
     }
   };
 
-  if (isLoading) {
+  const TaskCard = ({ task }) => {
+    const policyData = task.variables?.policyData || {};
+
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="bg-white rounded-lg shadow hover:shadow-md transition-shadow duration-200 p-6">
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <div className="flex items-center mb-3">
+              <DocumentTextIcon className="h-5 w-5 text-gray-400 mr-2" />
+              <h3 className="text-lg font-medium text-gray-900">
+                {getTaskTypeDisplayText(task.elementId) || task.name || 'Review Task'}
+              </h3>
+            </div>
+
+            <div className="flex flex-wrap gap-2 mb-4">
+              <StatusBadge status={task.state} type="task" size="sm" />
+              {policyData.riskLevel && (
+                <StatusBadge status={policyData.riskLevel} type="risk" size="sm" />
+              )}
+            </div>
+
+            {policyData.title && (
+              <div className="mb-3">
+                <p className="text-sm font-medium text-gray-700">Policy:</p>
+                <p className="text-sm text-gray-900">{policyData.title}</p>
+              </div>
+            )}
+
+            <div className="space-y-1 text-sm text-gray-600">
+              <div className="flex justify-between">
+                <span>Process Instance:</span>
+                <span className="font-mono text-xs">{task.processInstanceKey}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Created:</span>
+                <span>{timeAgo(task.creationTime)}</span>
+              </div>
+              {task.assignee && (
+                <div className="flex justify-between">
+                  <span>Assigned to:</span>
+                  <span>{task.assignee}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-col space-y-2 ml-4">
+            <button
+              onClick={() => handleViewTask(task)}
+              className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
+              title="View Task"
+            >
+              <EyeIcon className="h-4 w-4" />
+            </button>
+
+            {!task.assignee && (
+              <button
+                onClick={() => handleClaimTask(task.id)}
+                disabled={claimTaskMutation.isLoading}
+                className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded disabled:opacity-50"
+                title="Claim Task"
+              >
+                <UserIcon className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     );
+  };
+
+  if (isLoading) {
+    return <LoadingSpinner size="lg" text="Loading tasks..." />;
   }
 
   if (error) {
     return (
-      <div className="text-center py-8">
-        <XCircleIcon className="h-12 w-12 text-red-500 mx-auto mb-4" />
-        <p className="text-gray-600">Failed to load tasks</p>
-        <button
-          onClick={() => refetch()}
-          className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-        >
-          Retry
-        </button>
+      <div className="max-w-6xl mx-auto p-6">
+        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+          <h3 className="text-red-800 font-medium">Error loading tasks</h3>
+          <p className="text-red-600 mt-1">{error.message}</p>
+          <button
+            onClick={() => refetch()}
+            className="mt-3 text-red-600 hover:text-red-800 underline"
+          >
+            Try again
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 flex items-center">
-          <ClockIcon className="h-6 w-6 mr-2" />
-          My Tasks ({tasks.length})
-        </h2>
-        <p className="text-gray-600 mt-2">
-          Review and complete your assigned policy management tasks.
-        </p>
+    <div className="max-w-7xl mx-auto p-6">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center">
+            <ClockIcon className="h-6 w-6 mr-2" />
+            My Tasks ({filteredTasks.length})
+          </h1>
+          <p className="text-gray-600 mt-1">
+            Review and complete your assigned policy management tasks
+          </p>
+        </div>
+
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={() => refetch()}
+            className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+          >
+            <ArrowPathIcon className="h-4 w-4 mr-2" />
+            Refresh
+          </button>
+
+          <div className="flex rounded-md shadow-sm">
+            <button
+              onClick={() => setViewMode('list')}
+              className={`px-3 py-2 text-sm font-medium rounded-l-md border ${
+                viewMode === 'list'
+                  ? 'bg-blue-50 border-blue-500 text-blue-700'
+                  : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <ListBulletIcon className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`px-3 py-2 text-sm font-medium rounded-r-md border-t border-r border-b ${
+                viewMode === 'grid'
+                  ? 'bg-blue-50 border-blue-500 text-blue-700'
+                  : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <Squares2X2Icon className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
       </div>
 
-      {tasks.length === 0 ? (
-        <div className="text-center py-12 bg-gray-50 rounded-lg">
-          <CheckCircleIcon className="h-12 w-12 text-green-500 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No tasks assigned</h3>
-          <p className="text-gray-600">You're all caught up! No pending tasks at the moment.</p>
+      {/* Search and Filters */}
+      <SearchFilter
+        onSearch={setSearchTerm}
+        onFilter={setFilters}
+        filters={filterConfig}
+        placeholder="Search tasks by name, policy title, process instance..."
+        className="mb-6"
+      />
+
+      {/* Content */}
+      {viewMode === 'grid' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          {filteredTasks.map((task) => (
+            <TaskCard key={task.id} task={task} />
+          ))}
         </div>
       ) : (
-        <div className="space-y-4">
-          {tasks.map((task) => (
-            <div
-              key={task.id}
-              className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow"
-            >
-              <div className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-2">
-                      <h3 className="text-lg font-medium text-gray-900">
-                        {getTaskTypeLabel(task.taskDefinitionId)}
-                      </h3>
-                      
-                      {task.variables?.approvalDecision?.priority && (
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${getTaskPriorityColor(task.variables.approvalDecision.priority)}`}>
-                          {task.variables.approvalDecision.priority} Priority
-                        </span>
-                      )}
-                    </div>
-
-                    {task.policyInfo && (
-                      <div className="mb-3">
-                        <h4 className="font-medium text-gray-800 flex items-center">
-                          <DocumentTextIcon className="h-4 w-4 mr-1" />
-                          {task.policyInfo.title}
-                        </h4>
-                        <div className="flex items-center space-x-4 mt-1 text-sm text-gray-600">
-                          <span>Category: {task.policyInfo.category}</span>
-                          {task.variables?.policyData?.riskLevel && (
-                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${getRiskLevelColor(task.variables.policyData.riskLevel)}`}>
-                              {task.variables.policyData.riskLevel} Risk
-                            </span>
-                          )}
-                          <span>Author: {task.policyInfo.author_name}</span>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="flex items-center space-x-4 text-sm text-gray-500">
-                      <span className="flex items-center">
-                        <ClockIcon className="h-4 w-4 mr-1" />
-                        Created: {new Date(task.created || task.creationTime).toLocaleDateString()}
-                      </span>
-                      
-                      {task.assignee && (
-                        <span className="flex items-center">
-                          <UserIcon className="h-4 w-4 mr-1" />
-                          Assigned to: {task.assignee}
-                        </span>
-                      )}
-
-                      {task.dueDate && (
-                        <span className="flex items-center text-orange-600">
-                          <ClockIcon className="h-4 w-4 mr-1" />
-                          Due: {new Date(task.dueDate).toLocaleDateString()}
-                        </span>
-                      )}
-                    </div>
-
-                    {task.variables?.approvalDecision?.reason && (
-                      <div className="mt-2 p-2 bg-blue-50 rounded text-sm text-blue-800">
-                        <strong>Reason:</strong> {task.variables.approvalDecision.reason}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex flex-col space-y-2 ml-4">
-                    <button
-                      onClick={() => handleViewTask(task)}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
-                    >
-                      <EyeIcon className="h-4 w-4 mr-1" />
-                      View
-                    </button>
-
-                    {task.assignee === userId ? (
-                      <button
-                        onClick={() => handleUnclaimTask(task.id)}
-                        className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
-                      >
-                        Unclaim
-                      </button>
-                    ) : !task.assignee ? (
-                      <button
-                        onClick={() => handleClaimTask(task.id)}
-                        className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-                      >
-                        Claim
-                      </button>
-                    ) : (
-                      <span className="px-4 py-2 bg-gray-100 text-gray-600 rounded-md text-center">
-                        Claimed
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
+        <div className="space-y-4 mb-6">
+          {filteredTasks.map((task) => (
+            <TaskCard key={task.id} task={task} />
           ))}
+        </div>
+      )}
+
+      {filteredTasks.length === 0 && (
+        <div className="text-center py-12">
+          <ClockIcon className="mx-auto h-12 w-12 text-gray-400" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900">No tasks found</h3>
+          <p className="mt-1 text-sm text-gray-500">
+            {searchTerm || Object.keys(filters).length > 0
+              ? 'Try adjusting your search or filters'
+              : 'You\'re all caught up! No pending tasks at the moment.'
+            }
+          </p>
         </div>
       )}
 

@@ -7,41 +7,19 @@ import {
   HomeIcon,
   DocumentTextIcon,
   ClipboardDocumentListIcon,
-  ClockIcon
+  ClockIcon,
+  CogIcon,
+  UsersIcon,
+  ChartBarIcon
 } from '@heroicons/react/24/outline';
 
 import PolicyForm from './components/PolicyForm';
 import TaskList from './components/TaskList';
-// import PolicyList from './components/PolicyList';
-// import Dashboard from './components/Dashboard';
-
-// Placeholder components for now
-const PolicyList = () => (
-  <div className="max-w-6xl mx-auto p-6">
-    <h2 className="text-2xl font-bold mb-4">All Policies</h2>
-    <p className="text-gray-600">Policy list component coming soon...</p>
-  </div>
-);
-
-const Dashboard = () => (
-  <div className="max-w-6xl mx-auto p-6">
-    <h2 className="text-2xl font-bold mb-4">Dashboard</h2>
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <div className="bg-white p-6 rounded-lg shadow">
-        <h3 className="text-lg font-medium mb-2">Total Policies</h3>
-        <p className="text-3xl font-bold text-blue-600">--</p>
-      </div>
-      <div className="bg-white p-6 rounded-lg shadow">
-        <h3 className="text-lg font-medium mb-2">Pending Reviews</h3>
-        <p className="text-3xl font-bold text-orange-600">--</p>
-      </div>
-      <div className="bg-white p-6 rounded-lg shadow">
-        <h3 className="text-lg font-medium mb-2">Published This Month</h3>
-        <p className="text-3xl font-bold text-green-600">--</p>
-      </div>
-    </div>
-  </div>
-);
+import PolicyList from './components/PolicyList';
+import Dashboard from './components/Dashboard';
+import ProcessMonitor from './components/ProcessMonitor';
+import UserManagement from './components/UserManagement';
+import WorkflowVisualization from './components/WorkflowVisualization';
 
 
 
@@ -63,6 +41,9 @@ const Navigation = () => {
     { path: '/policies/new', label: 'Create Policy', icon: DocumentTextIcon },
     { path: '/policies', label: 'All Policies', icon: ClipboardDocumentListIcon },
     { path: '/tasks', label: 'My Tasks', icon: ClockIcon },
+    { path: '/processes', label: 'Process Monitor', icon: CogIcon },
+    { path: '/workflow', label: 'Workflow View', icon: ChartBarIcon },
+    { path: '/users', label: 'User Management', icon: UsersIcon },
   ];
 
   return (
@@ -120,6 +101,9 @@ const App = () => {
               <Route path="/policies/new" element={<PolicyForm />} />
               <Route path="/policies" element={<PolicyList />} />
               <Route path="/tasks" element={<TaskList />} />
+              <Route path="/processes" element={<ProcessMonitor />} />
+              <Route path="/workflow" element={<WorkflowVisualization />} />
+              <Route path="/users" element={<UserManagement />} />
             </Routes>
           </main>
           

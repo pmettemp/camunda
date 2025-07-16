@@ -12,8 +12,30 @@ const policySchema = Joi.object({
   title: Joi.string().required().min(3).max(200),
   category: Joi.string().required().valid('HR', 'IT', 'Finance', 'Legal', 'Compliance', 'Operations', 'Security'),
   content: Joi.string().required().min(10),
-  effectiveDate: Joi.date().required(),
-  expiryDate: Joi.date().greater(Joi.ref('effectiveDate')).required(),
+  effectiveDate: Joi.string().required().custom((value, helpers) => {
+    if (!value || value.trim() === '') {
+      return helpers.error('any.invalid', { message: 'Effective date is required and cannot be empty' });
+    }
+    const date = new Date(value);
+    if (isNaN(date.getTime())) {
+      return helpers.error('any.invalid', { message: 'Effective date must be a valid date' });
+    }
+    return value;
+  }),
+  expiryDate: Joi.string().required().custom((value, helpers) => {
+    if (!value || value.trim() === '') {
+      return helpers.error('any.invalid', { message: 'Expiry date is required and cannot be empty' });
+    }
+    const date = new Date(value);
+    if (isNaN(date.getTime())) {
+      return helpers.error('any.invalid', { message: 'Expiry date must be a valid date' });
+    }
+    const effectiveDate = new Date(helpers.state.ancestors[0].effectiveDate);
+    if (date <= effectiveDate) {
+      return helpers.error('any.invalid', { message: 'Expiry date must be after effective date' });
+    }
+    return value;
+  }),
   riskLevel: Joi.string().required().valid('Low', 'Medium', 'High', 'Critical'),
   requiresLegalReview: Joi.boolean().default(false),
   requiresComplianceReview: Joi.boolean().default(false),
@@ -24,9 +46,13 @@ const policySchema = Joi.object({
 // Create new policy
 router.post('/', async (req, res) => {
   try {
+    // Log the request body for debugging
+    logger.info('Policy creation request body:', req.body);
+
     // Validate input
     const { error, value } = policySchema.validate(req.body);
     if (error) {
+      logger.error('Validation error:', error.details);
       return res.status(400).json({
         success: false,
         message: 'Validation error',

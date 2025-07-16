@@ -1,6 +1,6 @@
 const axios = require('axios');
 
-const API_URL = 'http://localhost:3005';
+const API_URL = 'http://localhost:3001';
 
 async function testSimpleAPI() {
   console.log('🧪 TESTING SIMPLE POLICY API\n');

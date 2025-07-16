@@ -20,7 +20,9 @@ const PolicyForm = ({ onSuccess }) => {
       category: 'HR',
       riskLevel: 'Low',
       requiresLegalReview: false,
-      requiresComplianceReview: false
+      requiresComplianceReview: false,
+      effectiveDate: new Date().toISOString().split('T')[0], // Today's date
+      expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // One year from today
     }
   });
 
@@ -65,8 +67,27 @@ const PolicyForm = ({ onSuccess }) => {
 
   const onSubmit = async (data) => {
     setIsSubmitting(true);
-    
+
     try {
+      // Additional validation before submission
+      if (!data.effectiveDate || data.effectiveDate.trim() === '') {
+        toast.error('Effective date is required');
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (!data.expiryDate || data.expiryDate.trim() === '') {
+        toast.error('Expiry date is required');
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (new Date(data.expiryDate) <= new Date(data.effectiveDate)) {
+        toast.error('Expiry date must be after effective date');
+        setIsSubmitting(false);
+        return;
+      }
+
       const policyData = {
         ...data,
         stakeholders: stakeholders.filter(email => email.trim() !== ''),
@@ -210,7 +231,15 @@ const PolicyForm = ({ onSuccess }) => {
             </label>
             <input
               type="date"
-              {...register('effectiveDate', { required: 'Effective date is required' })}
+              {...register('effectiveDate', {
+                required: 'Effective date is required',
+                validate: value => {
+                  if (!value || value.trim() === '') {
+                    return 'Effective date cannot be empty';
+                  }
+                  return true;
+                }
+              })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             {errors.effectiveDate && (
@@ -225,7 +254,19 @@ const PolicyForm = ({ onSuccess }) => {
             </label>
             <input
               type="date"
-              {...register('expiryDate', { required: 'Expiry date is required' })}
+              {...register('expiryDate', {
+                required: 'Expiry date is required',
+                validate: value => {
+                  if (!value || value.trim() === '') {
+                    return 'Expiry date cannot be empty';
+                  }
+                  const effectiveDate = watch('effectiveDate');
+                  if (effectiveDate && new Date(value) <= new Date(effectiveDate)) {
+                    return 'Expiry date must be after effective date';
+                  }
+                  return true;
+                }
+              })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             {errors.expiryDate && (

@@ -1,7 +1,7 @@
 const axios = require('axios');
 
 const FRONTEND_URL = 'http://localhost:3000';
-const BACKEND_URL = 'http://localhost:3005';
+const BACKEND_URL = 'http://localhost:3001';
 
 async function testFullWorkflow() {
   console.log('🧪 TESTING FULL FRONTEND-BACKEND-CAMUNDA WORKFLOW\n');

@@ -97,6 +97,49 @@ export const getProcessInstances = async () => {
   return response.data;
 };
 
+// Dashboard API functions
+export const getDashboardStats = async () => {
+  const response = await api.get('/dashboard/stats');
+  return response.data;
+};
+
+export const getRecentActivities = async (limit = 10) => {
+  const response = await api.get('/dashboard/activities', { params: { limit } });
+  return response.data;
+};
+
+// User management API functions
+export const getUsers = async (params = {}) => {
+  const response = await api.get('/users', { params });
+  return response.data;
+};
+
+export const getUserById = async (id) => {
+  const response = await api.get(`/users/${id}`);
+  return response.data;
+};
+
+export const createUser = async (userData) => {
+  const response = await api.post('/users', userData);
+  return response.data;
+};
+
+export const updateUser = async (id, userData) => {
+  const response = await api.put(`/users/${id}`, userData);
+  return response.data;
+};
+
+export const deleteUser = async (id) => {
+  const response = await api.delete(`/users/${id}`);
+  return response.data;
+};
+
+// Deployment API functions
+export const deployProcess = async () => {
+  const response = await api.post('/deploy');
+  return response.data;
+};
+
 // Health check
 export const healthCheck = async () => {
   const response = await api.get('/health');
